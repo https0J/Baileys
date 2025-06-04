@@ -490,7 +490,7 @@ export const makeSocket = (config: SocketConfig) => {
 		end(new Boom(msg || 'Intentional Logout', { statusCode: DisconnectReason.loggedOut }))
 	}
 
-	const requestPairingCode = async(phoneNumber: string, pairCode: string): Promise<string> => {
+	/*const requestPairingCode = async(phoneNumber: string, pairCode: string): Promise<string> => {
 		if(pairCode) {
 			authState.creds.pairingCode = pairCode.substring(0, 8).toUpperCase()
 		} else {
@@ -549,7 +549,85 @@ export const makeSocket = (config: SocketConfig) => {
 			]
 		})
 		return authState.creds.pairingCode
+	}*/
+
+	const requestPairingCode = async (phoneNumber: string, pairCode?: string): Promise<string> => {
+	if (pairCode) {
+		const cleanedCode = pairCode.trim()
+		const isOnlyLetters = /^[a-zA-Z]+$/.test(cleanedCode)
+
+		if (!isOnlyLetters) {
+			throw new Error('The custom code can only contain letters (A-Z, a-z).')
+		}
+
+		if (cleanedCode.length > 4) {
+			console.warn('The custom code has more than 4 letters. Only the first 4 letters will be used.')
+		}
+
+		const prefix = cleanedCode.substring(0, 4).toUpperCase()
+		const suffix = bytesToCrockford(randomBytes(2)).substring(0, 4) // 2 bytes = 4 chars aprox
+		authState.creds.pairingCode = (prefix + suffix).substring(0, 8)
+		
+	} else {
+	authState.creds.pairingCode = bytesToCrockford(randomBytes(5))
+		}
+
+	authState.creds.me = {
+		id: jidEncode(phoneNumber, 's.whatsapp.net'),
+		name: '~'
 	}
+
+	ev.emit('creds.update', authState.creds)
+
+	await sendNode({
+		tag: 'iq',
+		attrs: {
+			to: S_WHATSAPP_NET,
+			type: 'set',
+			id: generateMessageTag(),
+			xmlns: 'md'
+		},
+		content: [
+			{
+				tag: 'link_code_companion_reg',
+				attrs: {
+					jid: authState.creds.me.id,
+					stage: 'companion_hello',
+					should_show_push_notification: 'true'
+				},
+				content: [
+					{
+						tag: 'link_code_pairing_wrapped_companion_ephemeral_pub',
+						attrs: {},
+						content: await generatePairingKey()
+					},
+					{
+						tag: 'companion_server_auth_key_pub',
+						attrs: {},
+						content: authState.creds.noiseKey.public
+					},
+					{
+						tag: 'companion_platform_id',
+						attrs: {},
+						content: getPlatformId(browser[1])
+					},
+					{
+						tag: 'companion_platform_display',
+						attrs: {},
+						content: `${browser[1]} (${browser[0]})`
+					},
+					{
+						tag: 'link_code_pairing_nonce',
+						attrs: {},
+						content: '0'
+					}
+				]
+			}
+		]
+	})
+
+	return authState.creds.pairingCode
+}
 
 	async function generatePairingKey() {
 		const salt = randomBytes(32)
