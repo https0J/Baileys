@@ -7,12 +7,12 @@
     "js-whatsapp", "whatsapp-api", "whatsapp-web", "whatsapp-bot",
     "automation", "multi-device"
   ],
-  "homepage": "https://github.com/GataNina-Li/Baileys",
+  "homepage": "https://github.com/https0J/Baileys",
   "repository": {
-    "url": "git+ssh://git@github.com/GataNina-Li/Baileys.git"
+    "url": "git+ssh://git@github.com/https0J/Baileys.git"
   },
   "license": "MIT",
-  "author": "Gata Dios",
+  "author": "https_(S2)",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
